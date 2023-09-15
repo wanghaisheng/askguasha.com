@@ -1,0 +1,243 @@
+---
+title: React Native
+sidebarTitle: React Native
+sidebar: Docs
+showTitle: true
+github: https://github.com/PostHog/posthog-react-native
+icon: ../../../images/docs/integrate/react.svg
+features:
+    eventCapture: true
+    userIdentification: true
+    autoCapture: true
+    sessionRecording: false
+    featureFlags: true
+    groupAnalytics: true
+---
+
+Purely built for React Native, this library allows you to integrate PostHog with your React Native project. For React Native projects built with Expo, there are no mobile native dependencies outside of supported Expo packages.
+
+## Installation
+
+import ReactNativeInstall from '../../integrate/_snippets/install-react-native.mdx'
+
+<ReactNativeInstall />
+
+## Usage
+
+## Capturing events
+
+import RNSendEvents from '../../integrate/send-events/_snippets/send-events-react-native.mdx'
+
+<RNSendEvents />
+
+## Identify
+
+> We highly recommend reading our section on [Identifying users](/docs/integrate/identifying-users) to better understand how to correctly use this method.
+
+import ReactNativeIdentify from './\_snippets/identify.mdx'
+
+<ReactNativeIdentify />
+
+## Setting user properties via an event
+
+When capturing an event, you can pass a property called `$set` as an event property, and specify its value to be an object with properties to be set on the user that will be associated with the user who triggered the event.
+
+### $set
+
+**Example**
+
+```js
+posthog.capture('some event', { $set: { userProperty: 'value' } })
+```
+
+**Usage**
+
+When capturing an event, you can pass a property called `$set` as an event property, and specify its value to be an object with properties to be set on the user that will be associated with the user who triggered the event.
+
+### $set_once
+
+**Example**
+
+```js
+posthog.capture('some event', { $set_once: { userProperty: 'value' } })
+```
+
+**Usage**
+
+`$set_once` works just like `$set`, except that it will **only set the property if the user doesn't already have that property set**.
+
+## Super Properties
+
+Super Properties are properties associated with events that are set once and then sent with every `capture` call, be it a $screen, an autocaptured touch, or anything else.
+
+They are set using `posthog.register`, which takes a properties object as a parameter, and they persist across sessions.
+
+For example, take a look at the following call:
+
+```js
+posthog.register({
+    'icecream pref': 'vanilla',
+    team_id: 22,
+})
+```
+
+The call above ensures that every event sent by the user will include `"icecream pref": "vanilla"` and `"team_id": 22`. This way, if you filtered events by property using `icecream_pref = vanilla`, it would display all events captured on that user after the `posthog.register` call, since they all include the specified Super Property.
+
+However, please note that this does not store properties against the User, only against their events. To store properties against the User object, you should use `posthog.identify`. More information on this can be found on the [Sending User Information section](#sending-user-information).
+
+### Removing stored Super Properties
+
+Super Properties are persisted across sessions so you have to explicitly remove them if they are no longer relevant. In order to stop sending a Super Property with events, you can use `posthog.unregister`, like so:
+
+```js
+posthog.unregister('icecream pref'),
+```
+
+This will remove the Super Property and subsequent events will not include it.
+
+If you are doing this as part of a user logging out you can instead simply use `posthog.reset` which takes care of clearing all stored Super Properties and more.
+
+## Flush
+
+You can set the number of events in the configuration that should queue before flushing.
+Setting this to `1` will send events immediately and will use more battery. This is set to `20` by default.
+
+You can also configure the flush interval. By default we flush all events after `30` seconds,
+no matter how many events have gathered.
+
+You can also manually flush the queue, like so:
+
+```javascript
+posthog.flush()
+// or using async/await
+await posthog.flushAsync()
+```
+
+## Reset
+
+To reset the user's ID and anonymous ID, call `reset`. Usually you would do this right after the user logs out.
+
+```javascript
+posthog.reset()
+```
+
+## Opt in/out
+
+By default, PostHog has tracking enabled unless it is forcefully disabled by default using the option `{ enable: false }`.
+
+You can give your users the option to opt in or out by calling the relevant methods. Once these have been called they are persisted and will be respected until optIn/Out is called again or the `reset` function is called.
+
+To Opt in/out of tracking, use the following calls.
+
+```javascript
+posthog.optIn() // opt in
+posthog.optOut() // opt out
+```
+
+If you still wish capture these events but want to create a distinction between users and team in PostHog, you should look into [Cohorts](/docs/user-guides/cohorts#differentiating-team-vs-users-traffic).
+
+## Feature Flags
+
+import FeatureFlagsLibsIntro from "../_snippets/feature-flags-libs-intro.mdx"
+
+<FeatureFlagsLibsIntro />
+
+import ReactNativeFeatureFlagsCode from "../../integrate/feature-flags-code/_snippets/feature-flags-code-react-native.mdx"
+
+<ReactNativeFeatureFlagsCode />
+
+### Bootstrapping Flags
+
+import BootstrappingIntro from "../../feature-flags/snippets/bootstrapping-intro.mdx"
+
+<BootstrappingIntro />
+
+For details on how to implement bootstrapping, see our [bootstrapping guide](/docs/feature-flags/bootstrapping)
+
+## Experiments (A/B tests)
+
+Since [experiments](/docs/experiments/manual) use feature flags, the code for running an experiment is very similar to the feature flags code:
+
+```react-native
+// With the useFeatureFlag hook
+import { useFeatureFlag } from 'posthog-react-native'
+
+const MyComponent = () => {
+    const variant = useFeatureFlag('experiment-feature-flag-key')
+
+    if (variant === undefined) {
+        // the response is undefined if the flags are being loaded
+        return null
+    }
+
+    if (variant == 'variant-name') {
+        // do something
+    }
+}           
+```
+
+It's also possible to [run experiments without using feature flags](/docs/experiments/running-experiments-without-feature-flags).
+
+## Group analytics
+
+Group analytics allows you to associate the events for that person's session with a group (e.g. teams, organizations, etc.). Read the [Group Analytics](/docs/user-guides/group-analytics) guide for more information.
+
+> **Note: ** This is a paid feature and is not available on the open-source or free cloud plan. Learn more [here](/pricing).
+
+-   Associate the events for this session with a group
+
+```js
+posthog.group('company', 'company_id_in_your_db')
+
+posthog.capture('upgraded plan') // this event is associated with company ID `company_id_in_your_db`
+```
+
+-   Associate the events for this session with a group AND update the properties of that group
+
+```js
+posthog.group('company', 'company_id_in_your_db', {
+    name: 'Awesome Inc.',
+    employees: 11,
+})
+```
+
+The `name` is a special property which is used in the PostHog UI for the name of the Group. If you don't specify a `name` property, the group ID will be used instead.
+
+## Upgrading from V1 to V2
+
+V1 of this library utilised the underlying `posthog-ios` and `posthog-android` SDKs to do most of the work. Since the new version is written entirely in JS, using only Expo supported libraries, there are some changes to the way PostHog is configured as well as actually calling PostHog.
+
+For iOS, the new React Native SDK will attempt to migrate the previously persisted data which should result in no unexpected changes to tracked data.
+
+For Android, it is unfortunately not possible for persisted Android data to be loaded which means stored information such as the randomly generated `anonymousId` or the `distinctId` set by `posthog.identify` will not be present. For identified users, the simple workaround is to ensure that `identify` is called at least once when the app loads. For anonymous users there is unfortunately no straightforward workaround they will show up as new anonymous users in PostHog.
+
+```jsx
+// DEPRECATED V1 Setup
+
+import PostHog from 'posthog-react-native'
+
+await PostHog.setup('phc_ChmcdLbC770zgl23gp3Lax6SERzC2szOUxtp0Uy4nTf', {
+    host: 'https://app.posthog.com',
+    captureApplicationLifecycleEvents: false, // Replaced by `PostHogProvider`
+    captureDeepLinks: false, // No longer supported
+    recordScreenViews: false, // Replaced by `PostHogProvider` supporting @react-navigation/native
+    flushInterval: 30, // Stays the same
+    flushAt: 20, // Stays the same
+    android: {...}, // No longer needed
+    iOS: {...}, // No longer needed
+})
+
+PostHog.capture("foo")
+
+
+// V2 Setup difference
+import PostHog from 'posthog-react-native'
+
+const posthog = await Posthog.initAsync('phc_ChmcdLbC770zgl23gp3Lax6SERzC2szOUxtp0Uy4nTf', {
+    host: 'https://app.posthog.com',
+    // Add any other options here.
+})
+
+// Use created instance rather than the PostHog class
+posthog.capture("foo")
+```
